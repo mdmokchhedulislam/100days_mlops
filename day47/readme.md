@@ -40,6 +40,8 @@ The fix: widen the ``amount`` lower bound so the guard matches the
 updated business reality. The minimum accepted value below is still
 ``0`` -- change it.
 """
+
+
 from __future__ import annotations
 
 import great_expectations as gx
@@ -95,4 +97,31 @@ if __name__ == "__main__":
     main() 
 
 
-    
+.getia/data-quality.yml
+name: Data Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  data-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Great Expectations
+        run: |
+          pip install --break-system-packages \
+            great_expectations pandas numpy
+
+      - name: Run drift_check checkpoint
+        run: python3 -m src.gx_run
+
+      - name: Upload Data Docs Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: data-docs
+          path: gx/uncommitted/data_docs/
