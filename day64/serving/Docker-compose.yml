@@ -1,0 +1,25 @@
+services:
+  fraud:
+    build: ./fraud
+    container_name: mm-fraud
+
+  churn:
+    build: ./churn
+    container_name: mm-churn
+  
+  recommend:
+    build: ./recommend
+    container_name: mm-recommend
+
+
+  nginx:
+    image: nginx:alpine
+    container_name: mm-nginx
+    ports:
+      - "8085:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - fraud
+      - churn
+      - recommend
