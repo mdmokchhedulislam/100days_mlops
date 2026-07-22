@@ -1,0 +1,11 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    flask redis prometheus-flask-exporter joblib numpy scikit-learn
+
+COPY app.py /app/app.py
+
+EXPOSE 5000
+CMD ["python3", "/app/app.py"]
