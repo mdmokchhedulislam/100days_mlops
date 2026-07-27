@@ -1,0 +1,31 @@
+services:
+  metric-emitter:
+    build: ./app
+    container_name: metric-emitter
+    volumes:
+      # Evidently drift scorer output (host-side loop) — the emitter
+      # republishes these scores as Prometheus gauges.
+      - ./drift:/drift:ro
+
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    container_name: mon-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - metric-emitter
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    container_name: mon-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=grafana2026
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
