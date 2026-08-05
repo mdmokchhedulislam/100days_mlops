@@ -1,0 +1,13 @@
+{
+  "source": "evidently",
+  "method": "psi",
+  "drift_scores": {
+    "amount": 1.4477,
+    "hour": 0.331,
+    "num_tx_past_day": 0.6691
+  },
+  "drift_share": 1.0,
+  "drifted_columns": 3,
+  "rows_scored": 300,
+  "cycle": 214
+}
