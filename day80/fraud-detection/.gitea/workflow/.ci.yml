@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ruff
+        run: pip install --break-system-packages ruff
+      - name: Run ruff
+        run: ruff check src tests
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pytest + runtime deps
+        run: pip install --break-system-packages pytest pandas numpy scikit-learn joblib
+      - name: Run all tests
+        run: python3 -m pytest tests -v
+
+  register:
+    runs-on: ubuntu-latest
+
+
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      MLFLOW_TOKEN: ${{ secrets.MLFLOW_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install registration deps
+        run: pip install --break-system-packages mlflow numpy scikit-learn joblib pandas
+      - name: Train and register
+        run: python3 -m src.register
