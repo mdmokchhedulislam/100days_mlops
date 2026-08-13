@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    env:
+      REGISTRY: localhost:3000
+      IMAGE: gitea-admin/fraud-detector
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Gitea container registry
+        run: |
+          echo "${{ secrets.REGISTRY_TOKEN }}" | \
+            docker login "$REGISTRY" -u gitea-admin --password-stdin
+
+      - name: Build image
+        run: |
+          docker build \
+            -t "$REGISTRY/$IMAGE:${{ steps.version.outputs.VERSION }}" \
+            .
+
+      - name: Push image to Gitea registry
+        run: |
+          docker push "$REGISTRY/$IMAGE:${{ steps.version.outputs.VERSION }}"
+
+      - name: Train model + emit metrics.json
+        run: |
+          pip install --break-system-packages numpy scikit-learn joblib
+          python3 -m src.train
+
+      - name: Attach metrics.json to the release
+        uses: akkuman/gitea-release-action@v1
+        with:
+          files: artifacts/metrics.json
+          token: ${{ secrets.REGISTRY_TOKEN }}

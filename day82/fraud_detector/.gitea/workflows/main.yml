@@ -1,0 +1,24 @@
+name: Main
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# The `lint` job is the example wiring -- it calls the reusable
+# lint.yml via `uses:`. The `test` and `report` jobs below duplicate
+# the logic already parked in test.yml and report.yml. Convert both
+# of them to `uses:` calls in the same shape as `lint`.
+
+jobs:
+  lint:
+    uses: ./.gitea/workflows/lint.yml
+
+  test:
+    uses: ./.gitea/workflows/test.yml
+  
+
+  report:
+    uses: ./.gitea/workflows/report.yml
+   
