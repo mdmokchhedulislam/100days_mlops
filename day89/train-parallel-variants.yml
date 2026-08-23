@@ -1,0 +1,75 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: train-parallel-variants
+  namespace: argo
+
+spec:
+  entrypoint: main
+
+  arguments:
+    parameters:
+      - name: estimators_list
+        value: '["10","50","100"]'
+
+  templates:
+
+    # ==========================================
+    # MAIN
+    # ==========================================
+    - name: main
+      steps:
+
+        # TODO 1: FAN-OUT
+        - - name: train
+            template: train-variant
+
+            # Take each item from estimators_list
+            withParam: "{{workflow.parameters.estimators_list}}"
+
+            # Pass current item to train-variant
+            arguments:
+              parameters:
+                - name: n_estimators
+                  value: "{{item}}"
+
+        # TODO 2: FAN-IN
+        - - name: pick-best
+            template: pick-best
+
+    # ==========================================
+    # TRAIN VARIANT
+    # ==========================================
+    - name: train-variant
+      inputs:
+        parameters:
+          - name: n_estimators
+
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          N='{{inputs.parameters.n_estimators}}'
+
+          case "$N" in
+            ''|*[!0-9]*)
+              echo "[train] ERROR: n_estimators must be a positive integer, got: $N"
+              exit 1
+              ;;
+          esac
+
+          echo "[train] fitting with n_estimators=$N"
+
+          sleep 2
+
+          echo "model-n$N"
+
+    # ==========================================
+    # PICK BEST
+    # ==========================================
+    - name: pick-best
+      container:
+        image: alpine:3.19
+        command: [sh, -c]
+        args:
+          - "echo '[pick_best] selected: model-n100'"
