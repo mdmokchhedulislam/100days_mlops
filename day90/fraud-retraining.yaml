@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: fraud-retraining
+  namespace: argo
+
+spec:
+  schedules:
+    - "* * * * *"
+
+  timezone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 2
+
+  workflowSpec:
+    entrypoint: main
+
+    templates:
+      - name: main
+        container:
+          image: alpine:3.19
+          command: [sh, -c]
+          args:
+            - |
+              echo "retrain: $(date -u)"
+              exit 0
