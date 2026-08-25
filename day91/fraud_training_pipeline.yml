@@ -1,0 +1,127 @@
+metadata:
+  name: fraud-training-pipeline
+  namespace: argo
+  uid: eaf158fd-caab-477a-984c-ef125b5d06dc
+  resourceVersion: "3759"
+  generation: 4
+  creationTimestamp: "2026-08-24T15:52:46Z"
+  labels:
+    workflows.argoproj.io/action: Update
+    workflows.argoproj.io/actor: system-serviceaccount-argo-argo-server
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"argoproj.io/v1alpha1","kind":"WorkflowTemplate","metadata":{"annotations":{},"name":"fraud-training-pipeline","namespace":"argo"},"spec":{"entrypoint":"main","templates":[{"name":"main","steps":[[{"name":"train","template":"train"}],[{"arguments":{"parameters":[{"name":"run_id","value":"{{steps.train.outputs.parameters.runid}}"}]},"name":"register","template":"register"}]]},{"name":"train","outputs":{"parameters":[{"name":"run_id","valueFrom":{"path":"/tmp/run_id"}}]},"script":{"command":["python"],"env":[{"name":"MLFLOW_TRACKING_URI","value":"http://mlflow.default.svc.cluster.local:5000"}],"image":"python:3.11-slim","source":"import os, subprocess, sys\nsubprocess.check_call([sys.executable, \"-m\", \"pip\", \"install\",\n    \"--quiet\", \"mlflow==2.20.0\", \"scikit-learn\"])\nimport mlflow, mlflow.sklearn\nfrom sklearn.dummy import DummyClassifier\nimport numpy as np\n\nmlflow.set_tracking_uri(os.environ[\"MLFLOW_TRACKING_URI\"])\nmlflow.set_experiment(\"fraud-detector\")\n\nX = np.zeros((20, 4)); y = [0, 1] * 10\nmodel = DummyClassifier(strategy=\"most_frequent\").fit(X, y)\n\nwith mlflow.start_run() as run:\n    mlflow.log_metric(\"f1_score\", 0.82)\n    mlflow.sklearn.log_model(model, artifact_path=\"model\")\n    with open(\"/tmp/run_id\", \"w\") as f:\n        f.write(run.info.run_id)\n    print(f\"[train] run_id={run.info.run_id}\")\n"}},{"inputs":{"parameters":[{"name":"run_id"}]},"name":"register","script":{"command":["python"],"env":[{"name":"MLFLOW_TRACKING_URI","value":"http://mlflow.default.svc.cluster.local:5000"}],"image":"python:3.11-slim","source":"import os, subprocess, sys\nsubprocess.check_call([sys.executable, \"-m\", \"pip\", \"install\",\n    \"--quiet\", \"mlflow==2.20.0\"])\nimport mlflow\nmlflow.set_tracking_uri(os.environ[\"MLFLOW_TRACKING_URI\"])\nrun_id = \"{{inputs.parameters.run_id}}\"\nif not run_id or run_id == \"None\":\n    raise SystemExit(\n        \"register received an empty run_id. \"\n        \"Check the parameter reference on the register step.\"\n    )\nresult = mlflow.register_model(\n    f\"runs:/{run_id}/model\", \"fraud-detector\",\n)\nprint(f\"[register] {result.name} v{result.version}\")\n"}}]}}
+  managedFields:
+    - manager: kubectl-client-side-apply
+      operation: Update
+      apiVersion: argoproj.io/v1alpha1
+      time: "2026-08-24T15:52:46Z"
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            ".": {}
+            f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:spec:
+          ".": {}
+          f:entrypoint: {}
+    - manager: argo
+      operation: Update
+      apiVersion: argoproj.io/v1alpha1
+      time: "2026-08-24T16:23:56Z"
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            ".": {}
+            f:workflows.argoproj.io/action: {}
+            f:workflows.argoproj.io/actor: {}
+        f:spec:
+          f:arguments: {}
+          f:templates: {}
+spec:
+  templates:
+    - name: main
+      inputs: {}
+      outputs: {}
+      metadata: {}
+      steps:
+        - - name: train
+            template: train
+            arguments: {}
+        - - name: register
+            template: register
+            arguments:
+              parameters:
+                - name: run_id
+                  value: "{{steps.train.outputs.parameters.run_id}}"
+    - name: train
+      inputs: {}
+      outputs:
+        parameters:
+          - name: run_id
+            valueFrom:
+              path: /tmp/run_id
+      metadata: {}
+      script:
+        name: ""
+        image: python:3.11-slim
+        command:
+          - python
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: http://mlflow.mlflow.svc.cluster.local:5000
+        resources: {}
+        source: |
+          import os, subprocess, sys
+          subprocess.check_call([sys.executable, "-m", "pip", "install",
+              "--quiet", "mlflow==2.20.0", "scikit-learn"])
+          import mlflow, mlflow.sklearn
+          from sklearn.dummy import DummyClassifier
+          import numpy as np
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          mlflow.set_experiment("fraud-detector")
+
+          X = np.zeros((20, 4)); y = [0, 1] * 10
+          model = DummyClassifier(strategy="most_frequent").fit(X, y)
+
+          with mlflow.start_run() as run:
+              mlflow.log_metric("f1_score", 0.82)
+              mlflow.sklearn.log_model(model, artifact_path="model")
+              with open("/tmp/run_id", "w") as f:
+                  f.write(run.info.run_id)
+              print(f"[train] run_id={run.info.run_id}")
+    - name: register
+      inputs:
+        parameters:
+          - name: run_id
+      outputs: {}
+      metadata: {}
+      script:
+        name: ""
+        image: python:3.11-slim
+        command:
+          - python
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: http://mlflow.mlflow.svc.cluster.local:5000
+        resources: {}
+        source: |
+          import os, subprocess, sys
+          subprocess.check_call([sys.executable, "-m", "pip", "install",
+              "--quiet", "mlflow==2.20.0"])
+          import mlflow
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          run_id = "{{inputs.parameters.run_id}}"
+          if not run_id or run_id == "None":
+              raise SystemExit(
+                  "register received an empty run_id. "
+                  "Check the parameter reference on the register step."
+              )
+          result = mlflow.register_model(
+              f"runs:/{run_id}/model", "fraud-detector",
+          )
+          print(f"[register] {result.name} v{result.version}")
+  entrypoint: main
+  arguments: {}
