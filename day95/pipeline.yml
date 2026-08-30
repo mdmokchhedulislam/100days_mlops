@@ -1,0 +1,92 @@
+# PIPELINE DEFINITION
+# Name: fraud-training
+# Description: Synthetic two-step training pipeline for the KFP lab.
+components:
+  comp-prep-data:
+    executorLabel: exec-prep-data
+  comp-train:
+    executorLabel: exec-train
+deploymentSpec:
+  executors:
+    exec-prep-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - prep_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.7.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef prep_data():\n    print(\"[prep_data] synthesising training data:\
+          \ synthetic-rows=100\")\n\n"
+        image: python:3.11-slim
+    exec-train:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.7.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train():\n    print(\"[train] training on synthetic data -> model\
+          \ artefact ready\")\n\n"
+        image: python:3.11-slim
+pipelineInfo:
+  description: Synthetic two-step training pipeline for the KFP lab.
+  name: fraud-training
+root:
+  dag:
+    tasks:
+      prep-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-prep-data
+        taskInfo:
+          name: prep-data
+      train:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train
+        dependentTasks:
+        - prep-data
+        taskInfo:
+          name: train
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.7.0
